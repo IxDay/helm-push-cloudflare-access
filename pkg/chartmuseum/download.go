@@ -1,7 +1,6 @@
 package chartmuseum
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 	"path"
@@ -21,15 +20,8 @@ func (client *Client) DownloadFile(filePath string) (*http.Response, error) {
 		return nil, err
 	}
 
-	if client.opts.accessToken != "" {
-		if client.opts.authHeader != "" {
-			req.Header.Set(client.opts.authHeader, client.opts.accessToken)
-		} else {
-			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", client.opts.accessToken))
-		}
-	} else if client.opts.username != "" && client.opts.password != "" {
-		req.SetBasicAuth(client.opts.username, client.opts.password)
-	}
+	req.Header.Set(cfHeaderId, client.opts.clientID)
+	req.Header.Set(cfHeaderSecret, client.opts.clientSecret)
 
 	return client.Do(req)
 }

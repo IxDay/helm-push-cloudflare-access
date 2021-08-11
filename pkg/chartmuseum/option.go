@@ -11,10 +11,8 @@ type (
 	// options specify optional settings
 	options struct {
 		url                string
-		username           string
-		password           string
-		accessToken        string
-		authHeader         string
+		clientID           string
+		clientSecret       string
 		contextPath        string
 		timeout            time.Duration
 		caFile             string
@@ -31,31 +29,17 @@ func URL(url string) Option {
 	}
 }
 
-// Username is HTTP basic auth username
-func Username(username string) Option {
+// ClientID is the Cloudflare Access client ID
+func ClientID(clientID string) Option {
 	return func(opts *options) {
-		opts.username = username
+		opts.clientID = clientID
 	}
 }
 
-// Password is HTTP basic auth password
-func Password(password string) Option {
+// ClientSecret is the Cloudflare Access client Secret
+func ClientSecret(clientSecret string) Option {
 	return func(opts *options) {
-		opts.password = password
-	}
-}
-
-// AccessToken is sent in the authorization header
-func AccessToken(accessToken string) Option {
-	return func(opts *options) {
-		opts.accessToken = accessToken
-	}
-}
-
-// AuthHeader is an alternative header to use for token auth
-func AuthHeader(authHeader string) Option {
-	return func(opts *options) {
-		opts.authHeader = authHeader
+		opts.clientSecret = clientSecret
 	}
 }
 

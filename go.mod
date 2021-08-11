@@ -1,4 +1,4 @@
-module github.com/chartmuseum/helm-push
+module github.com/IxDay/helm-push-cloudflare-access
 
 go 1.15
 

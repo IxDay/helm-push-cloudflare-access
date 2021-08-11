@@ -9,16 +9,13 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/user"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 
-	cm "github.com/chartmuseum/helm-push/pkg/chartmuseum"
-	"github.com/chartmuseum/helm-push/pkg/helm"
-	"github.com/ghodss/yaml"
+	cm "github.com/IxDay/helm-push-cloudflare-access/pkg/chartmuseum"
+	"github.com/IxDay/helm-push-cloudflare-access/pkg/helm"
 	"github.com/spf13/cobra"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/cli"
@@ -35,10 +32,8 @@ type (
 		appVersion         string
 		chartVersion       string
 		repoName           string
-		username           string
-		password           string
-		accessToken        string
-		authHeader         string
+		clientID           string
+		clientSecret       string
 		contextPath        string
 		forceUpload        bool
 		useHTTP            bool
@@ -112,10 +107,8 @@ func newPushCmd(args []string) *cobra.Command {
 	f := cmd.Flags()
 	f.StringVarP(&p.chartVersion, "version", "v", "", "Override chart version pre-push")
 	f.StringVarP(&p.appVersion, "app-version", "a", "", "Override app version pre-push")
-	f.StringVarP(&p.username, "username", "u", "", "Override HTTP basic auth username [$HELM_REPO_USERNAME]")
-	f.StringVarP(&p.password, "password", "p", "", "Override HTTP basic auth password [$HELM_REPO_PASSWORD]")
-	f.StringVarP(&p.accessToken, "access-token", "", "", "Send token in Authorization header [$HELM_REPO_ACCESS_TOKEN]")
-	f.StringVarP(&p.authHeader, "auth-header", "", "", "Alternative header to use for token auth [$HELM_REPO_AUTH_HEADER]")
+	f.StringVarP(&p.clientID, "client-id", "", "", "Cloudflare access client ID [$HELM_REPO_CLIENT_ID]")
+	f.StringVarP(&p.clientSecret, "client-secret", "", "", "Cloudflare access client secret [$HELM_REPO_CLIENT_SECRET]")
 	f.StringVarP(&p.contextPath, "context-path", "", "", "ChartMuseum context path [$HELM_REPO_CONTEXT_PATH]")
 	f.StringVarP(&p.caFile, "ca-file", "", "", "Verify certificates of HTTPS-enabled servers using this CA bundle [$HELM_REPO_CA_FILE]")
 	f.StringVarP(&p.certFile, "cert-file", "", "", "Identify HTTPS client using this SSL certificate file [$HELM_REPO_CERT_FILE]")
@@ -135,17 +128,11 @@ func newPushCmd(args []string) *cobra.Command {
 }
 
 func (p *pushCmd) setFieldsFromEnv() {
-	if v, ok := os.LookupEnv("HELM_REPO_USERNAME"); ok && p.username == "" {
-		p.username = v
+	if v, ok := os.LookupEnv("HELM_REPO_CLIENT_ID"); ok && p.clientID == "" {
+		p.clientID = v
 	}
-	if v, ok := os.LookupEnv("HELM_REPO_PASSWORD"); ok && p.password == "" {
-		p.password = v
-	}
-	if v, ok := os.LookupEnv("HELM_REPO_ACCESS_TOKEN"); ok && p.accessToken == "" {
-		p.accessToken = v
-	}
-	if v, ok := os.LookupEnv("HELM_REPO_AUTH_HEADER"); ok && p.authHeader == "" {
-		p.authHeader = v
+	if v, ok := os.LookupEnv("HELM_REPO_CLIENT_SECRET"); ok && p.clientSecret == "" {
+		p.clientSecret = v
 	}
 	if v, ok := os.LookupEnv("HELM_REPO_CONTEXT_PATH"); ok && p.contextPath == "" {
 		p.contextPath = v
@@ -164,35 +151,6 @@ func (p *pushCmd) setFieldsFromEnv() {
 	}
 	if v, ok := os.LookupEnv("HELM_REPO_INSECURE"); ok {
 		p.insecureSkipVerify, _ = strconv.ParseBool(v)
-	}
-
-	if p.accessToken == "" {
-		p.setAccessTokenFromConfigFile()
-	}
-}
-
-func (p *pushCmd) setAccessTokenFromConfigFile() {
-	usr, err := user.Current()
-	if err != nil {
-		return
-	}
-	configPath := path.Join(usr.HomeDir, ".cfconfig")
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return
-	}
-	var c config
-	yamlFile, err := ioutil.ReadFile(configPath)
-	if err != nil {
-		return
-	}
-	if err = yaml.Unmarshal(yamlFile, &c); err != nil {
-		return
-	}
-	for _, context := range c.Contexts {
-		if context.Name == c.CurrentContext {
-			p.accessToken = context.Token
-			break
-		}
 	}
 }
 
@@ -269,21 +227,6 @@ func (p *pushCmd) push() error {
 		chart.SetAppVersion(p.appVersion)
 	}
 
-	// username/password override(s)
-	username := repo.Config.Username
-	password := repo.Config.Password
-	if p.username != "" {
-		username = p.username
-	}
-	if p.password != "" {
-		password = p.password
-	}
-
-	// unset accessToken if repo credentials are provided
-	if username != "" && password != "" {
-		p.accessToken = ""
-	}
-
 	// in case the repo is stored with cm:// protocol, remove it
 	var url string
 	if p.useHTTP {
@@ -294,10 +237,8 @@ func (p *pushCmd) push() error {
 
 	client, err := cm.NewClient(
 		cm.URL(url),
-		cm.Username(username),
-		cm.Password(password),
-		cm.AccessToken(p.accessToken),
-		cm.AuthHeader(p.authHeader),
+		cm.ClientID(p.clientID),
+		cm.ClientSecret(p.clientSecret),
 		cm.ContextPath(p.contextPath),
 		cm.CAFile(p.caFile),
 		cm.CertFile(p.certFile),
@@ -368,10 +309,8 @@ func (p *pushCmd) download(fileURL string) error {
 
 	client, err := cm.NewClient(
 		cm.URL(parsedURL.String()),
-		cm.Username(p.username),
-		cm.Password(p.password),
-		cm.AccessToken(p.accessToken),
-		cm.AuthHeader(p.authHeader),
+		cm.ClientID(p.clientID),
+		cm.ClientSecret(p.clientSecret),
 		cm.ContextPath(p.contextPath),
 		cm.CAFile(p.caFile),
 		cm.CertFile(p.certFile),

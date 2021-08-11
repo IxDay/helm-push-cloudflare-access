@@ -2,7 +2,6 @@ package chartmuseum
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -11,6 +10,11 @@ import (
 	"os"
 	"path"
 	"strings"
+)
+
+const (
+	cfHeaderId     = "CF-Access-Client-Id"
+	cfHeaderSecret = "CF-Access-Client-Secret"
 )
 
 // UploadChartPackage uploads a chart package to ChartMuseum (POST /api/charts)
@@ -36,16 +40,8 @@ func (client *Client) UploadChartPackage(chartPackagePath string, force bool) (*
 		return nil, err
 	}
 
-	if client.opts.accessToken != "" {
-		if client.opts.authHeader != "" {
-			req.Header.Set(client.opts.authHeader, client.opts.accessToken)
-		} else {
-			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", client.opts.accessToken))
-		}
-	} else if client.opts.username != "" && client.opts.password != "" {
-		req.SetBasicAuth(client.opts.username, client.opts.password)
-	}
-
+	req.Header.Set(cfHeaderId, client.opts.clientID)
+	req.Header.Set(cfHeaderSecret, client.opts.clientSecret)
 	return client.Do(req)
 }
 
