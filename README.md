@@ -9,9 +9,9 @@ Helm plugin to push chart package to [ChartMuseum](https://github.com/helm/chart
 Based on the version in `plugin.yaml`, release binary will be downloaded from GitHub:
 
 ```
-$ helm plugin install https://github.com/IxDay/helm-push-cloudflare-access.git
-Downloading and installing helm-push v0.9.0 ...
-https://github.com/IxDay/helm-push-cloudflare-access/releases/download/v0.9.0/helm-push_0.9.0_darwin_amd64.tar.gz
+$ helm plugin install https://github.com/IxDay/helm-push-cloudflare-access
+Downloading and installing helm-push v0.10.0 ...
+https://github.com/IxDay/helm-push-cloudflare-access/releases/download/v0.10.0/helm-push_0.10.0_linux_amd64.tar.gz
 Installed plugin: push
 ```
 
